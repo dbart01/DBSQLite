@@ -9,10 +9,7 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 #import "DBSQLite.h"
-
-#if DBSQLiteUseSchema
 #import "DBSQLiteSchema.h"
-#endif
 
 static NSMutableDictionary *_registeredClasses;
 static NSMutableDictionary *_registeredClassMaps;
@@ -98,7 +95,6 @@ static Class _dataClass;
 }
 
 #pragma mark - Schema Building -
-#if DBSQLiteUseSchema
 - (DBSQLiteSchema *)buildSchema {
     NSMutableArray *tables = [NSMutableArray new];
     
@@ -122,7 +118,6 @@ static Class _dataClass;
     
     return [[DBSQLiteTable alloc] initWithName:tableName columns:columns];;
 }
-#endif
 
 #pragma mark - Register Model Classes -
 + (void)registerModelClass:(Class)class forName:(NSString *)name {

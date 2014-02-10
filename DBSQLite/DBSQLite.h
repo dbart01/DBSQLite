@@ -8,8 +8,6 @@
 #import <Foundation/Foundation.h>
 #import "DBSQLiteModelProtocol.h"
 
-#define DBSQLiteUseSchema 1
-
 static NSString * const kDBSQLiteModeDelete   = @"DELETE";
 static NSString * const kDBSQLiteModeTruncate = @"TRUNCATE";
 static NSString * const kDBSQLiteModePersist  = @"PERSIST";
@@ -21,9 +19,7 @@ static NSString * const kDBSQLiteModeFile     = @"FILE";
 static NSString * const kDBSQLiteModeNormal   = @"NORMAL";
 static NSString * const kDBSQLiteModeFull     = @"FULL";
 
-#if DBSQLiteUseSchema
 @class DBSQLiteSchema;
-#endif
 
 @interface DBSQLite : NSObject
 
@@ -58,8 +54,6 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 - (NSArray *)fetchObject:(NSString *)name query:(NSString *)query, ...;
 
 
-#if DBSQLiteUseSchema
 - (DBSQLiteSchema *)buildSchema;
-#endif
 
 @end
