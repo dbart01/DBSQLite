@@ -394,8 +394,8 @@ typedef id (*DBSQLiteConversionFunction)(id);
     NSString *queryString = [[NSString alloc] initWithFormat:query arguments:args];
     va_end(args);
     
-    sqlite3_stmt *statement   = [self prepareStatement:queryString];
-    NSMutableArray *container = [NSMutableArray new];
+    sqlite3_stmt *statement     = [self prepareStatement:queryString];
+    CFMutableArrayRef container = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
     
     int columnCount = sqlite3_column_count(statement);
     if (columnCount > 0) {
@@ -418,13 +418,13 @@ typedef id (*DBSQLiteConversionFunction)(id);
                     
                 }
             }
-            [container addObject:objectContainer];
+            CFArrayAppendValue(container, (__bridge const void *)objectContainer);
         }
     }
     
     sqlite3_finalize(statement);
     
-    return container;
+    return CFBridgingRelease(container);
 }
 
 #pragma mark - SQLite Errors -

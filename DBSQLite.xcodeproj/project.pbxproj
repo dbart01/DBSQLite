@@ -9,14 +9,14 @@
 /* Begin PBXBuildFile section */
 		9AF6CBEF18A946AE0078DA05 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AF6CBEE18A946AE0078DA05 /* Foundation.framework */; };
 		9AF6CBF518A946AE0078DA05 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AF6CBF318A946AE0078DA05 /* InfoPlist.strings */; };
-		9AF6CC7218ABD91E0078DA05 /* DBSQLiteSchema.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6918ABD91E0078DA05 /* DBSQLiteSchema.h */; };
+		9AF6CC7218ABD91E0078DA05 /* DBSQLiteSchema.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6918ABD91E0078DA05 /* DBSQLiteSchema.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AF6CC7318ABD91E0078DA05 /* DBSQLiteSchema.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AF6CC6A18ABD91E0078DA05 /* DBSQLiteSchema.m */; };
-		9AF6CC7418ABD91E0078DA05 /* DBSQLiteTable.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6B18ABD91E0078DA05 /* DBSQLiteTable.h */; };
+		9AF6CC7418ABD91E0078DA05 /* DBSQLiteTable.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6B18ABD91E0078DA05 /* DBSQLiteTable.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AF6CC7518ABD91E0078DA05 /* DBSQLiteTable.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AF6CC6C18ABD91E0078DA05 /* DBSQLiteTable.m */; };
-		9AF6CC7618ABD91E0078DA05 /* DBSQLiteColumn.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6D18ABD91E0078DA05 /* DBSQLiteColumn.h */; };
+		9AF6CC7618ABD91E0078DA05 /* DBSQLiteColumn.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6D18ABD91E0078DA05 /* DBSQLiteColumn.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AF6CC7718ABD91E0078DA05 /* DBSQLiteColumn.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AF6CC6E18ABD91E0078DA05 /* DBSQLiteColumn.m */; };
-		9AF6CC7818ABD91E0078DA05 /* DBSQLiteModelProtocol.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6F18ABD91E0078DA05 /* DBSQLiteModelProtocol.h */; };
-		9AF6CC7918ABD91E0078DA05 /* DBSQLite.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC7018ABD91E0078DA05 /* DBSQLite.h */; };
+		9AF6CC7818ABD91E0078DA05 /* DBSQLiteModelProtocol.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6F18ABD91E0078DA05 /* DBSQLiteModelProtocol.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		9AF6CC7918ABD91E0078DA05 /* DBSQLite.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC7018ABD91E0078DA05 /* DBSQLite.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AF6CC7A18ABD91E0078DA05 /* DBSQLite.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AF6CC7118ABD91E0078DA05 /* DBSQLite.m */; };
 /* End PBXBuildFile section */
 
