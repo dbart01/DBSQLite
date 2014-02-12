@@ -11,7 +11,4 @@
 
 + (NSDictionary *)keyMapForModelObject;
 
-@optional
-+ (NSDictionary *)transformersForModelObject;
-
 @end

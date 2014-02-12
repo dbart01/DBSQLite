@@ -24,4 +24,9 @@
     return self;
 }
 
+#pragma mark - Description -
+- (NSString *)description {
+    return [[[_tables description] stringByReplacingOccurrencesOfString:@"\\n" withString:@"\n"] stringByReplacingOccurrencesOfString:@"\\" withString:@""];
+}
+
 @end

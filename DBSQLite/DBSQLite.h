@@ -5,7 +5,7 @@
 //  Copyright (c) 2014 Dima Bart. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import "DBSQLiteModelProtocol.h"
 
 static NSString * const kDBSQLiteModeDelete   = @"DELETE";
@@ -26,9 +26,11 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 @property (assign, nonatomic, readonly) BOOL inTransaction;
 @property (strong, nonatomic, readonly) NSString *databasePath;
 
-@property (strong, nonatomic, readonly) NSString *synchronous;    // Default: NORMAL
-@property (strong, nonatomic, readonly) NSString *journalMode;    // Default: DELETE
-@property (strong, nonatomic, readonly) NSString *temporaryStore; // Default: MEMORY
+@property (assign, nonatomic, readonly) NSJSONWritingOptions jsonWritingOptions; // Default: 0
+@property (assign, nonatomic, readonly) NSJSONReadingOptions jsonReadingOptions; // Default: 0
+@property (strong, nonatomic, readonly) NSString *synchronous;                   // Default: NORMAL
+@property (strong, nonatomic, readonly) NSString *journalMode;                   // Default: DELETE
+@property (strong, nonatomic, readonly) NSString *temporaryStore;                // Default: MEMORY
 
 + (void)registerModelClass:(Class)class forName:(NSString *)name;
 + (instancetype)sharedController;
@@ -41,12 +43,17 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 - (void)closeConnection;
 
 - (void)startTransaction;
+- (void)startExclusiveTransaction;
+- (void)startImmediateTransaction;
 - (void)commitTransaction;
 - (void)rollbackTransaction;
 
 - (void)setSynchronous:(NSString *)synchronous;
 - (void)setJournalMode:(NSString *)journalMode;
 - (void)setTemporaryStore:(NSString *)temporaryStore;
+
+- (void)setJsonWritingOptions:(NSJSONWritingOptions)jsonWritingOptions;
+- (void)setJsonReadingOptions:(NSJSONReadingOptions)jsonReadingOptions;
 
 - (NSString *)sql:(NSString *)sql, ...;
 - (BOOL)executeQuery:(NSString *)query, ...;

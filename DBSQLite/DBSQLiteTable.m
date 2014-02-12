@@ -25,9 +25,9 @@
     return self;
 }
 
-//#pragma mark - Description -
-//- (NSString *)description {
-//    return [NSString stringWithFormat:@"%@:\n%@", _name, _columns];
-//}
+#pragma mark - Description -
+- (NSString *)description {
+    return [[[NSString stringWithFormat:@"%@:\n%@", _name, _columns] stringByReplacingOccurrencesOfString:@"\\n" withString:@"\n"] stringByReplacingOccurrencesOfString:@"\\" withString:@""];
+}
 
 @end
