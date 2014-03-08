@@ -503,37 +503,6 @@ static void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) 
     }
 }
 
-//static void dbsqlite_bindNumber(sqlite3_stmt *statement, int column, NSNumber *number) {
-//    CFNumberType type = CFNumberGetType((__bridge CFNumberRef)number);
-//    switch (type) {
-//            
-//        case kCFNumberSInt8Type:
-//        case kCFNumberSInt16Type:
-//        case kCFNumberSInt32Type:
-//        case kCFNumberIntType:
-//        case kCFNumberShortType:
-//        case kCFNumberCharType:
-//        case kCFNumberCFIndexType:
-//            sqlite3_bind_int(statement, column, [number intValue]);
-//            break;
-//            
-//        case kCFNumberLongType:
-//        case kCFNumberLongLongType:
-//        case kCFNumberSInt64Type:
-//        case kCFNumberNSIntegerType:
-//            sqlite3_bind_int64(statement, column, [number longLongValue]);
-//            break;
-//            
-//        case kCFNumberFloat32Type:
-//        case kCFNumberFloat64Type:
-//        case kCFNumberFloatType:
-//        case kCFNumberCGFloatType:
-//        case kCFNumberDoubleType:
-//            sqlite3_bind_double(statement, column, [number doubleValue]);
-//            break;
-//    }
-//}
-
 static id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, BOOL useNil) {
     int columnType = sqlite3_column_type(statement, columnNumber);
     switch (columnType) {
