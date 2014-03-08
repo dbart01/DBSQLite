@@ -48,7 +48,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
 }
 
 #pragma mark - Singleton -
-+ (instancetype)sharedController {
++ (instancetype)sharedDatabase {
     static DBSQLite *_sharedInstance;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -79,6 +79,15 @@ typedef id (*DBSQLiteConversionFunction)(id);
     self = [super init];
     if (self) {
         [self openConnectionInDocuments:file];
+        [self initialization];
+    }
+    return self;
+}
+
+- (instancetype)initWithBundleFile:(NSString *)file extension:(NSString *)extension {
+    self = [super init];
+    if (self) {
+        [self openConnectionInBundle:file extension:extension];
         [self initialization];
     }
     return self;
@@ -131,13 +140,10 @@ typedef id (*DBSQLiteConversionFunction)(id);
 }
 
 #pragma mark - Register Model Classes -
-+ (void)registerModelClass:(Class)class forName:(NSString *)name {
-    if ([name length] < 1) {
-        NSLog(@"DBSQLite: Cannot register class for <null> name.");
-        abort();
-    }
-    
++ (void)registerModelClass:(Class)class {
     if ([class conformsToProtocol:@protocol(DBSQLiteModelProtocol)]) {
+        NSString *name                     = NSStringFromClass(class);
+        
         _registeredClasses[name]           = class;
         _registeredClassMaps[name]         = [class keyMapForModelObject];
         
@@ -190,6 +196,10 @@ typedef id (*DBSQLiteConversionFunction)(id);
 - (BOOL)openConnectionInDocuments:(NSString *)file  {
     NSString *path = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
     return [self openConnectionToPath:[path stringByAppendingPathComponent:file]];
+}
+
+- (BOOL)openConnectionInBundle:(NSString *)file extension:(NSString *)extension {
+    return [self openConnectionToPath:[[NSBundle mainBundle] pathForResource:file ofType:extension]];
 }
 
 - (void)closeConnection {
@@ -318,11 +328,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
             [self cacheStatement:statement forSQL:query];
         }
     }
-    
-    int arg_count = sqlite3_bind_parameter_count(statement);
-    for (int i=1; i<=arg_count; i++) {
-        dbsqlite_bindObject(va_arg(args, id), statement, i);
-    }
+    dbsqlite_bindStatementArgs(args, statement);
     
     int status = sqlite3_step(statement);
     
@@ -349,13 +355,15 @@ typedef id (*DBSQLiteConversionFunction)(id);
 }
 
 #pragma mark - Fetch Query -
-- (NSArray *)fetchDictionary:(NSString *)query, ... {
+- (NSMutableArray *)fetchDictionary:(NSString *)query, ... {
     va_list args;
     va_start(args, query);
-    NSString *queryString = [[NSString alloc] initWithFormat:query arguments:args];
+    
+    sqlite3_stmt *statement = [self prepareStatement:query];
+    dbsqlite_bindStatementArgs(args, statement);
+    
     va_end(args);
     
-    sqlite3_stmt *statement     = [self prepareStatement:queryString];
     CFMutableArrayRef container = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
     
     int columnCount = sqlite3_column_count(statement);
@@ -372,12 +380,14 @@ typedef id (*DBSQLiteConversionFunction)(id);
         }
     }
     
+    sqlite3_clear_bindings(statement);
+    sqlite3_reset(statement);
     sqlite3_finalize(statement);
     
     return CFBridgingRelease(container);
 }
 
-- (NSArray *)fetchObject:(NSString *)name query:(NSString *)query, ... {
+- (NSMutableArray *)fetchObject:(NSString *)name query:(NSString *)query, ... {
     
     Class class                = [self classForName:name];
     NSDictionary *map          = [self classMapForName:name];
@@ -391,10 +401,12 @@ typedef id (*DBSQLiteConversionFunction)(id);
     
     va_list args;
     va_start(args, query);
-    NSString *queryString = [[NSString alloc] initWithFormat:query arguments:args];
+    
+    sqlite3_stmt *statement = [self prepareStatement:query];
+    dbsqlite_bindStatementArgs(args, statement);
+    
     va_end(args);
     
-    sqlite3_stmt *statement     = [self prepareStatement:queryString];
     CFMutableArrayRef container = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
     
     int columnCount = sqlite3_column_count(statement);
@@ -422,6 +434,8 @@ typedef id (*DBSQLiteConversionFunction)(id);
         }
     }
     
+    sqlite3_clear_bindings(statement);
+    sqlite3_reset(statement);
     sqlite3_finalize(statement);
     
     return CFBridgingRelease(container);
@@ -489,6 +503,37 @@ static void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) 
     }
 }
 
+//static void dbsqlite_bindNumber(sqlite3_stmt *statement, int column, NSNumber *number) {
+//    CFNumberType type = CFNumberGetType((__bridge CFNumberRef)number);
+//    switch (type) {
+//            
+//        case kCFNumberSInt8Type:
+//        case kCFNumberSInt16Type:
+//        case kCFNumberSInt32Type:
+//        case kCFNumberIntType:
+//        case kCFNumberShortType:
+//        case kCFNumberCharType:
+//        case kCFNumberCFIndexType:
+//            sqlite3_bind_int(statement, column, [number intValue]);
+//            break;
+//            
+//        case kCFNumberLongType:
+//        case kCFNumberLongLongType:
+//        case kCFNumberSInt64Type:
+//        case kCFNumberNSIntegerType:
+//            sqlite3_bind_int64(statement, column, [number longLongValue]);
+//            break;
+//            
+//        case kCFNumberFloat32Type:
+//        case kCFNumberFloat64Type:
+//        case kCFNumberFloatType:
+//        case kCFNumberCGFloatType:
+//        case kCFNumberDoubleType:
+//            sqlite3_bind_double(statement, column, [number doubleValue]);
+//            break;
+//    }
+//}
+
 static id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, BOOL useNil) {
     int columnType = sqlite3_column_type(statement, columnNumber);
     switch (columnType) {
@@ -516,6 +561,13 @@ static id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, 
             NSLog(@"DBSQLite: Unable to retrieve data type for column: %s | index: %i",sqlite3_column_name(statement, columnNumber), columnNumber);
             return (useNil) ? nil : [NSNull null];
             break;
+    }
+}
+
+static void dbsqlite_bindStatementArgs(va_list args, sqlite3_stmt *statement) {
+    int arg_count = sqlite3_bind_parameter_count(statement);
+    for (int i=1; i<=arg_count; i++) {
+        dbsqlite_bindObject(va_arg(args, id), statement, i);
     }
 }
 
@@ -586,8 +638,8 @@ static id dbsqlite_convertDataToJSONObject(NSData *data) {
     return [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
 }
 
-static NSDate * dbsqlite_convertIntervalToDate(NSTimeInterval interval) {
-    return [[NSDate alloc] initWithTimeIntervalSince1970:interval];
+static NSDate * dbsqlite_convertIntervalToDate(NSNumber *timeInterval) {
+    return [[NSDate alloc] initWithTimeIntervalSince1970:[timeInterval doubleValue]];
 }
 
 @end

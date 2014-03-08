@@ -32,14 +32,16 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 @property (strong, nonatomic, readonly) NSString *journalMode;                   // Default: DELETE
 @property (strong, nonatomic, readonly) NSString *temporaryStore;                // Default: MEMORY
 
-+ (void)registerModelClass:(Class)class forName:(NSString *)name;
-+ (instancetype)sharedController;
++ (instancetype)sharedDatabase;
++ (void)registerModelClass:(Class)class;
 
 - (instancetype)initWithPath:(NSString *)path;
 - (instancetype)initWithDocumentsFile:(NSString *)file;
+- (instancetype)initWithBundleFile:(NSString *)file extension:(NSString *)extension;
 
 - (BOOL)openConnectionToPath:(NSString *)filePath;
 - (BOOL)openConnectionInDocuments:(NSString *)file;
+- (BOOL)openConnectionInBundle:(NSString *)file extension:(NSString *)extension;
 - (void)closeConnection;
 
 - (void)startTransaction;
@@ -57,8 +59,8 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 
 - (NSString *)sql:(NSString *)sql, ...;
 - (BOOL)executeQuery:(NSString *)query, ...;
-- (NSArray *)fetchDictionary:(NSString *)query, ...;
-- (NSArray *)fetchObject:(NSString *)name query:(NSString *)query, ...;
+- (NSMutableArray *)fetchDictionary:(NSString *)query, ...;
+- (NSMutableArray *)fetchObject:(NSString *)name query:(NSString *)query, ...;
 
 
 - (DBSQLiteSchema *)buildSchema;
