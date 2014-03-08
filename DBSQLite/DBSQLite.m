@@ -573,18 +573,22 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
         free(attributes);
         
         
-        char *cName             = strndup(className+2, strlen(className)-3);
-        Class propertyClass     = NSClassFromString(CFBridgingRelease(CFStringCreateWithCString(kCFAllocatorDefault, cName, kCFStringEncodingUTF8)));
-        
-        DBSQLiteConversionFunction conversionPointer = dbsqlite_conversionFunctionForPropertyClass(propertyClass);
-        if (conversionPointer) {
-            char *pName              = strndup(ivarName+1, strlen(ivarName)-1);
-            CFStringRef propertyName = CFStringCreateWithCString(kCFAllocatorDefault, pName, kCFStringEncodingUTF8);
+        if (ivarName && className) {
+            char *cName             = strndup(className+2, strlen(className)-3);
+            Class propertyClass     = NSClassFromString(CFBridgingRelease(CFStringCreateWithCString(kCFAllocatorDefault, cName, kCFStringEncodingUTF8)));
+            free(cName);
             
-            if (!container) {
-                container = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+            DBSQLiteConversionFunction conversionPointer = dbsqlite_conversionFunctionForPropertyClass(propertyClass);
+            if (conversionPointer) {
+                char *pName              = strndup(ivarName+1, strlen(ivarName)-1);
+                CFStringRef propertyName = CFStringCreateWithCString(kCFAllocatorDefault, pName, kCFStringEncodingUTF8);
+                free(pName);
+                
+                if (!container) {
+                    container = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+                }
+                CFDictionarySetValue(container, propertyName, (__bridge CFTypeRef)[NSValue valueWithPointer:conversionPointer]);
             }
-            CFDictionarySetValue(container, propertyName, (__bridge CFTypeRef)[NSValue valueWithPointer:conversionPointer]);
         }
         
     }
