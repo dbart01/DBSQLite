@@ -458,11 +458,16 @@ static void dbsqlite_loadStaticVariables() {
     if (!_numberClass)     _numberClass     = [NSNumber class];
     if (!_dateClass)       _dateClass       = [NSDate class];
     if (!_dataClass)       _dataClass       = [NSData class];
-    if (!_imageClass)      _imageClass      = [UIImage class];
     if (!_arrayClass)      _arrayClass      = [NSArray class];
     if (!_dictionaryClass) _dictionaryClass = [NSDictionary class];
     
+#if TARGET_OS_IPHONE
+    if (!_imageClass)      _imageClass      = [UIImage class];
     if (!_screenScale)     _screenScale     = [[UIScreen mainScreen] scale];
+#else
+    if (!_imageClass)      _imageClass      = [NSImage class];
+    if (!_screenScale)     _screenScale     = 1.0f;
+#endif
 }
 
 #pragma mark - Object Operations & Binding -
@@ -490,7 +495,12 @@ static void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) 
         sqlite3_bind_blob(statement, column, [(NSData *)object bytes], (int)[(NSData *)object length], SQLITE_TRANSIENT);
         
     } else if ([object isKindOfClass:_imageClass]) {
+        
+#if TARGET_OS_IPHONE
         NSData *data = UIImagePNGRepresentation(object);
+#else
+        NSData *data = [(NSImage *)object TIFFRepresentation];
+#endif
         sqlite3_bind_blob(statement, column, [data bytes], (int)[data length], SQLITE_TRANSIENT);
         
     } else if ([object isKindOfClass:_arrayClass] || [object isKindOfClass:_dictionaryClass]) {
@@ -599,10 +609,6 @@ static void * dbsqlite_conversionFunctionForPropertyClass(Class class) {
 }
 
 #pragma mark - Conversion Functions -
-static UIImage * dbsqlite_convertDataToImage(NSData *data) {
-    return [[UIImage alloc] initWithData:data scale:_screenScale];
-}
-
 static id dbsqlite_convertDataToJSONObject(NSData *data) {
     return [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
 }
@@ -610,5 +616,15 @@ static id dbsqlite_convertDataToJSONObject(NSData *data) {
 static NSDate * dbsqlite_convertIntervalToDate(NSNumber *timeInterval) {
     return [[NSDate alloc] initWithTimeIntervalSince1970:[timeInterval doubleValue]];
 }
+
+#if TARGET_OS_IPHONE
+static UIImage * dbsqlite_convertDataToImage(NSData *data) {
+    return [[UIImage alloc] initWithData:data scale:_screenScale];
+}
+#else
+static NSImage * dbsqlite_convertDataToImage(NSData *data) {
+    return [[NSImage alloc] initWithData:data];
+}
+#endif
 
 @end

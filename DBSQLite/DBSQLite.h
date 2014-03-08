@@ -5,7 +5,13 @@
 //  Copyright (c) 2014 Dima Bart. All rights reserved.
 //
 
+
+
+    #if TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
+    #else
+#import <AppKit/AppKit.h>
+    #endif
 #import "DBSQLiteModelProtocol.h"
 
 static NSString * const kDBSQLiteModeDelete   = @"DELETE";
