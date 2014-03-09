@@ -65,6 +65,8 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 
 - (NSString *)sql:(NSString *)sql, ...;
 - (BOOL)executeQuery:(NSString *)query, ...;
+- (BOOL)executePlainQuery:(NSString *)query;
+
 - (NSMutableArray *)fetchDictionary:(NSString *)query, ...;
 - (NSMutableArray *)fetchObject:(NSString *)name query:(NSString *)query, ...;
 

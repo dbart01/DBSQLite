@@ -115,28 +115,28 @@ typedef id (*DBSQLiteConversionFunction)(id);
 
 #pragma mark - Schema Building -
 - (DBSQLiteSchema *)buildSchema {
-    CFMutableArrayRef tables = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+    NSMutableArray *tables = [NSMutableArray new];
     
     NSArray *tablesList = [self fetchDictionary:@"SELECT * FROM sqlite_master WHERE type = 'table' AND tbl_name != 'sqlite_sequence'"];
     for (NSDictionary *tableDict in tablesList) {
         
-        CFArrayAppendValue(tables, (__bridge const void *)[self buildTable:tableDict[@"tbl_name"]]);
+        [tables addObject:[self buildTable:tableDict[@"tbl_name"]]];
     }
     
-    return [[DBSQLiteSchema alloc] initWithTables:CFBridgingRelease(tables)];
+    return [[DBSQLiteSchema alloc] initWithTables:tables];
 }
 
 - (DBSQLiteTable *)buildTable:(NSString *)tableName {
-    CFMutableArrayRef columns = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+    NSMutableArray *columns = [NSMutableArray new];
     
-    NSArray *columnsList = [self fetchDictionary:@"PRAGMA table_info(%s)", [tableName UTF8String]];
+    NSString *sql        = [self sql:@"PRAGMA table_info(%@)", tableName];
+    NSArray *columnsList = [self fetchDictionary:sql];
     for (NSDictionary *columnDict in columnsList) {
         DBSQLiteColumn *column = [[DBSQLiteColumn alloc] initWithDictionary:columnDict];
-        
-        CFArrayAppendValue(columns, (__bridge const void *)column);
+        [columns addObject:column];
     }
     
-    return [[DBSQLiteTable alloc] initWithName:tableName columns:CFBridgingRelease(columns)];
+    return [[DBSQLiteTable alloc] initWithName:tableName columns:columns];
 }
 
 #pragma mark - Register Model Classes -
@@ -250,17 +250,17 @@ typedef id (*DBSQLiteConversionFunction)(id);
 
 - (void)setSynchronous:(NSString *)synchronous {
     _synchronous = synchronous;
-    [self executeSingleQuery:[self sql:@"PRAGMA synchronous = %@",synchronous]];
+    [self executePlainQuery:[self sql:@"PRAGMA synchronous = %@",synchronous]];
 }
 
 - (void)setJournalMode:(NSString *)journalMode {
     _journalMode = journalMode;
-    [self executeSingleQuery:[self sql:@"PRAGMA journal_mode = %@",journalMode]];
+    [self executePlainQuery:[self sql:@"PRAGMA journal_mode = %@",journalMode]];
 }
 
 - (void)setTemporaryStore:(NSString *)temporaryStore {
     _temporaryStore = temporaryStore;
-    [self executeSingleQuery:[self sql:@"PRAGMA temp_store = %@",temporaryStore]];
+    [self executePlainQuery:[self sql:@"PRAGMA temp_store = %@",temporaryStore]];
 }
 
 - (void)setJsonWritingOptions:(NSJSONWritingOptions)jsonWritingOptions {
@@ -291,13 +291,12 @@ typedef id (*DBSQLiteConversionFunction)(id);
 - (NSString *)sql:(NSString *)sql, ... {
     va_list args;
     va_start(args, sql);
-    CFStringRef string   = CFStringCreateWithFormatAndArguments(kCFAllocatorDefault, NULL, (__bridge CFStringRef)sql, args);
+    NSString *string = [[NSString alloc] initWithFormat:sql arguments:args];
     va_end(args);
     
-    char *escaped_string = sqlite3_mprintf("%q",[(__bridge NSString *)string UTF8String]);
-    NSString *escaped    = CFBridgingRelease(CFStringCreateWithCString(kCFAllocatorDefault, escaped_string, kCFStringEncodingUTF8));
+    char *escaped_string = sqlite3_mprintf("%q",string.UTF8String);
+    NSString *escaped    = [NSString stringWithUTF8String:escaped_string];
     
-    CFRelease(string);
     sqlite3_free(escaped_string);
     
     return escaped;
@@ -318,28 +317,30 @@ typedef id (*DBSQLiteConversionFunction)(id);
 
 #pragma mark - Execute Query -
 - (BOOL)executeQuery:(NSString *)query, ... {
-    va_list args;
-    va_start(args, query);
-    
-    sqlite3_stmt *statement = [self statementForSQL:query];
-    if (!statement) {
-        statement = [self prepareStatement:query];
-        if (_inTransaction) {
-            [self cacheStatement:statement forSQL:query];
+    int status;
+    @autoreleasepool {
+        va_list args;
+        va_start(args, query);
+        
+        sqlite3_stmt *statement = [self statementForSQL:query];
+        if (!statement) {
+            statement = [self prepareStatement:query];
+            if (_inTransaction) {
+                [self cacheStatement:statement forSQL:query];
+            }
         }
+        dbsqlite_bindStatementArgs(args, statement);
+        
+        status = sqlite3_step(statement);
+        
+        sqlite3_clear_bindings(statement);
+        sqlite3_reset(statement);
+        va_end(args);
     }
-    dbsqlite_bindStatementArgs(args, statement);
-    
-    int status = sqlite3_step(statement);
-    
-    sqlite3_clear_bindings(statement);
-    sqlite3_reset(statement);
-    va_end(args);
-    
     return (status == SQLITE_DONE || status == SQLITE_OK);
 }
 
-- (BOOL)executeSingleQuery:(NSString *)query {
+- (BOOL)executePlainQuery:(NSString *)query {
     if (!_database) {
         [self throwError:@"No database connection established. Aborting query Execution"];
     }
@@ -364,19 +365,18 @@ typedef id (*DBSQLiteConversionFunction)(id);
     
     va_end(args);
     
-    CFMutableArrayRef container = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+    NSMutableArray *container = [NSMutableArray new];
     
     int columnCount = sqlite3_column_count(statement);
     if (columnCount > 0) {
         
         NSArray *names = dbsqlite_column_names(statement, columnCount);
         for (int i=0; sqlite3_step(statement) == SQLITE_ROW; i++) {
-            
-            CFMutableDictionaryRef dict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+            NSMutableDictionary *dict = [NSMutableDictionary new];
             for (int i=0;i<columnCount;i++) {
-                CFDictionarySetValue(dict, (__bridge CFTypeRef)names[i], (__bridge CFTypeRef)dbsqlite_object_for_column(statement, i, NO));
+                [dict setObject:dbsqlite_object_for_column(statement, i, NO) forKey:names[i]];
             }
-            CFArrayAppendValue(container, dict);
+            [container addObject:dict];
         }
     }
     
@@ -384,7 +384,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
     sqlite3_reset(statement);
     sqlite3_finalize(statement);
     
-    return CFBridgingRelease(container);
+    return container;
 }
 
 - (NSMutableArray *)fetchObject:(NSString *)name query:(NSString *)query, ... {
@@ -407,7 +407,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
     
     va_end(args);
     
-    CFMutableArrayRef container = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+    NSMutableArray *container = [NSMutableArray new];
     
     int columnCount = sqlite3_column_count(statement);
     if (columnCount > 0) {
@@ -430,7 +430,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
                     
                 }
             }
-            CFArrayAppendValue(container, (__bridge const void *)objectContainer);
+            [container addObject:objectContainer];
         }
     }
     
@@ -438,7 +438,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
     sqlite3_reset(statement);
     sqlite3_finalize(statement);
     
-    return CFBridgingRelease(container);
+    return container;
 }
 
 #pragma mark - SQLite Errors -
@@ -472,12 +472,11 @@ static void dbsqlite_loadStaticVariables() {
 
 #pragma mark - Object Operations & Binding -
 static NSArray * dbsqlite_column_names(sqlite3_stmt *statement, int columnCount) {
-    CFMutableArrayRef container = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+    NSMutableArray *container = [NSMutableArray new];
     for (int i=0;i<columnCount;i++) {
-        CFStringRef name = CFStringCreateWithCString(kCFAllocatorDefault, sqlite3_column_name(statement, i), kCFStringEncodingUTF8);
-        CFArrayAppendValue(container, name);
+        [container addObject:[NSString stringWithUTF8String:sqlite3_column_name(statement, i)]];
     }
-    return CFBridgingRelease(container);
+    return container;
 }
 
 static void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) {
@@ -525,7 +524,7 @@ static id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, 
             break;
             
         case SQLITE_TEXT:
-            return CFBridgingRelease(CFStringCreateWithCString(kCFAllocatorDefault, (const char *)sqlite3_column_text(statement, columnNumber), kCFStringEncodingUTF8));
+            return [NSString stringWithUTF8String:(const char *)sqlite3_column_text(statement, columnNumber)];
             break;
             
         case SQLITE_BLOB:
@@ -552,14 +551,14 @@ static void dbsqlite_bindStatementArgs(va_list args, sqlite3_stmt *statement) {
 
 #pragma mark - Registering Classes -
 static NSDictionary * dbsqlite_conversionDictionary(Class class) {
-    CFMutableDictionaryRef container = NULL;
+    NSMutableDictionary *container = nil;
     
     unsigned int propertyCount;
     objc_property_t *properties = class_copyPropertyList(class, &propertyCount);
     for (int i=0;i<propertyCount;i++) {
         
-        const char *ivarName;
-        const char *className;
+        const char *ivarName  = NULL;
+        const char *className = NULL;
         
         unsigned int attributeCount;
         objc_property_attribute_t *attributes = property_copyAttributeList(properties[i], &attributeCount);
@@ -572,29 +571,28 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
         }
         free(attributes);
         
-        
         if (ivarName && className) {
             char *cName             = strndup(className+2, strlen(className)-3);
-            Class propertyClass     = NSClassFromString(CFBridgingRelease(CFStringCreateWithCString(kCFAllocatorDefault, cName, kCFStringEncodingUTF8)));
+            Class propertyClass     = NSClassFromString([NSString stringWithUTF8String:cName]);
             free(cName);
             
             DBSQLiteConversionFunction conversionPointer = dbsqlite_conversionFunctionForPropertyClass(propertyClass);
             if (conversionPointer) {
-                char *pName              = strndup(ivarName+1, strlen(ivarName)-1);
-                CFStringRef propertyName = CFStringCreateWithCString(kCFAllocatorDefault, pName, kCFStringEncodingUTF8);
+                char *pName            = strndup(ivarName+1, strlen(ivarName)-1);
+                NSString *propertyName = [NSString stringWithUTF8String:pName];
                 free(pName);
                 
                 if (!container) {
-                    container = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+                    container = [NSMutableDictionary new];
                 }
-                CFDictionarySetValue(container, propertyName, (__bridge CFTypeRef)[NSValue valueWithPointer:conversionPointer]);
+                container[propertyName] = [NSValue valueWithPointer:conversionPointer];
             }
         }
         
     }
     free(properties);
     
-    return CFBridgingRelease(container);
+    return container;
 }
 
 static void * dbsqlite_conversionFunctionForPropertyClass(Class class) {
