@@ -334,7 +334,13 @@
 		9AF6CBFA18A946AE0078DA05 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				ARCHS = (
+					x86_64,
+					i386,
+					arm64,
+					armv7s,
+					armv7,
+				);
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_VERSION = A;
@@ -354,7 +360,13 @@
 		9AF6CBFB18A946AE0078DA05 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
+				ARCHS = (
+					x86_64,
+					i386,
+					arm64,
+					armv7s,
+					armv7,
+				);
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				FRAMEWORK_VERSION = A;

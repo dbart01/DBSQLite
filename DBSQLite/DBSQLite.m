@@ -15,6 +15,11 @@ static NSMutableDictionary *_registeredClasses;
 static NSMutableDictionary *_registeredClassMaps;
 static NSMutableDictionary *_registeredClassTransformers;
 
+static const char *_CGRectType            = "{CGRect={CGPoint=xx}{CGSize=xx}}";
+static const char *_CGPointType           = "{CGPoint=xx}";
+static const char *_CGSizeType            = "{CGSize=xx}";
+static const char *_CGAffineTransformType = "{CGAffineTransform=xxxxxx}";
+
 static Class _stringClass;
 static Class _numberClass;
 static Class _dateClass;
@@ -22,6 +27,7 @@ static Class _dataClass;
 static Class _imageClass;
 static Class _arrayClass;
 static Class _dictionaryClass;
+static Class _urlClass;
 
 static CGFloat _screenScale;
 
@@ -94,6 +100,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
 }
 
 - (void)initialization {
+    NSLog(@"SQLite Version: %s", SQLITE_VERSION);
     _preparedStatements  = [NSMutableDictionary new];
     
     [self defaultConfiguration];
@@ -105,6 +112,11 @@ typedef id (*DBSQLiteConversionFunction)(id);
 
 #pragma mark - Config -
 - (void)defaultConfiguration {
+    _savepointCount = 0;
+    
+    [self setBusyTimeout:10];
+    
+    [self setForeignKeysEnabled:YES];
     [self setSynchronous:kDBSQLiteModeNormal];
     [self setJournalMode:kDBSQLiteModeDelete];
     [self setTemporaryStore:kDBSQLiteModeMemory];
@@ -153,8 +165,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
         }
         
     } else {
-        NSLog(@"DBSQLite: Cannot register class. Class must conform to DBSQLiteModelProtocol.");
-        abort();
+        NSAssert(0, @"DBSQLite: Cannot register class. Class must conform to DBSQLiteModelProtocol.");
     }
 }
 
@@ -210,31 +221,31 @@ typedef id (*DBSQLiteConversionFunction)(id);
     }
 }
 
-#pragma mark - Transactions & Mode Setters -
+#pragma mark - Transactions -
 - (void)startTransaction {
     if (!_inTransaction) {
-        [self executeQuery:@"BEGIN;"];
+        [self executePlainQuery:@"BEGIN;"];
         _inTransaction = YES;
     }
 }
 
 - (void)startExclusiveTransaction {
     if (!_inTransaction) {
-        [self executeQuery:@"BEGIN EXCLUSIVE;"];
+        [self executePlainQuery:@"BEGIN EXCLUSIVE;"];
         _inTransaction = YES;
     }
 }
 
 - (void)startImmediateTransaction {
     if (!_inTransaction) {
-        [self executeQuery:@"BEGIN IMMEDIATE;"];
+        [self executePlainQuery:@"BEGIN IMMEDIATE;"];
         _inTransaction = YES;
     }
 }
 
 - (void)commitTransaction {
     if (_inTransaction) {
-        [self executeQuery:@"COMMIT;"];
+        [self executePlainQuery:@"COMMIT;"];
         [self clearStatementCache];
         _inTransaction = NO;
     }
@@ -242,25 +253,61 @@ typedef id (*DBSQLiteConversionFunction)(id);
 
 - (void)rollbackTransaction {
     if (_inTransaction) {
-        [self executeQuery:@"ROLLBACK;"];
+        [self executePlainQuery:@"ROLLBACK;"];
         [self clearStatementCache];
         _inTransaction = NO;
     }
 }
 
+#pragma mark - Savepoints -
+- (void)savepoint:(NSString *)savepoint {
+    _inTransaction = YES;
+    _savepointCount++;
+    [self executePlainQuery:[self sql:@"SAVEPOINT %@;", savepoint]];
+}
+
+- (void)releaseSavepoint:(NSString *)savepoint {
+    if (_savepointCount > 0) _savepointCount--;
+    if (_savepointCount == 0) {
+        _inTransaction = NO;
+    }
+    [self executePlainQuery:[self sql:@"RELEASE SAVEPOINT %@;", savepoint]];
+}
+
+- (void)rollbackSavepoint:(NSString *)savepoint {
+    // TODO: Handle savepoint count (how to determine how many are left?)
+    [self executePlainQuery:[self sql:@"ROLLBACK TRANSACTION TO SAVEPOINT %@;", savepoint]];
+}
+
+#pragma mark - Mode Setters -
+- (void)setBusyTimeout:(NSTimeInterval)busyTimeout {
+    _busyTimeout = busyTimeout;
+    sqlite3_busy_timeout(_database, (int)(1000.0f * busyTimeout));
+}
+
+- (void)setForeignKeysEnabled:(BOOL)enabled {
+    NSString *onString = (enabled) ? kDBSQLiteModeOn : kDBSQLiteModeOff;
+    if ([self executePlainQuery:[self sql:@"PRAGMA foreign_keys = %@;", onString]]) {
+        _foreignKeysActive = enabled;
+    }
+}
+
 - (void)setSynchronous:(NSString *)synchronous {
-    _synchronous = synchronous;
-    [self executePlainQuery:[self sql:@"PRAGMA synchronous = %@",synchronous]];
+    if ([self executePlainQuery:[self sql:@"PRAGMA synchronous = %@;",synchronous]]) {
+        _synchronous = synchronous;
+    }
 }
 
 - (void)setJournalMode:(NSString *)journalMode {
-    _journalMode = journalMode;
-    [self executePlainQuery:[self sql:@"PRAGMA journal_mode = %@",journalMode]];
+    if ([self executePlainQuery:[self sql:@"PRAGMA journal_mode = %@;",journalMode]]) {
+        _journalMode = journalMode;
+    }
 }
 
 - (void)setTemporaryStore:(NSString *)temporaryStore {
-    _temporaryStore = temporaryStore;
-    [self executePlainQuery:[self sql:@"PRAGMA temp_store = %@",temporaryStore]];
+    if ([self executePlainQuery:[self sql:@"PRAGMA temp_store = %@;",temporaryStore]]) {
+        _temporaryStore = temporaryStore;
+    }
 }
 
 - (void)setJsonWritingOptions:(NSJSONWritingOptions)jsonWritingOptions {
@@ -316,6 +363,10 @@ typedef id (*DBSQLiteConversionFunction)(id);
 }
 
 #pragma mark - Execute Query -
+- (NSNumber *)lastInsertID {
+    return @(sqlite3_last_insert_rowid(_database));
+}
+
 - (BOOL)executeQuery:(NSString *)query, ... {
     int status;
     @autoreleasepool {
@@ -337,6 +388,11 @@ typedef id (*DBSQLiteConversionFunction)(id);
         sqlite3_reset(statement);
         va_end(args);
     }
+    
+    //    if (status != SQLITE_DONE && status != SQLITE_OK) {
+    //        NSLog(@"DBSQLite: Error executing query: %s", sqlite3_errmsg(_database));
+    //    }
+    
     return (status == SQLITE_DONE || status == SQLITE_OK);
 }
 
@@ -353,6 +409,19 @@ typedef id (*DBSQLiteConversionFunction)(id);
         return NO;
     }
     return YES;
+}
+
+#pragma mark - Index Management -
+- (void)createIndex:(NSString *)name table:(NSString *)table column:(NSString *)column unique:(BOOL)unique {
+    [self executePlainQuery:[self sql:@"CREATE %@ INDEX IF NOT EXISTS %@ ON %@ (%@)", (unique) ? @"UNIQUE" : @"", name, table, column]];
+}
+
+- (void)createIndex:(NSString *)name table:(NSString *)table column:(NSString *)column {
+    [self createIndex:name table:table column:column unique:NO];
+}
+
+- (void)dropIndex:(NSString *)name {
+    [self executePlainQuery:[self sql:@"DROP INDEX IF EXISTS %@", name]];
 }
 
 #pragma mark - Fetch Query -
@@ -448,18 +517,18 @@ typedef id (*DBSQLiteConversionFunction)(id);
     NSString *string = [[NSString alloc] initWithFormat:message arguments:args];
     va_end(args);
     
-    NSLog(@"DBSQLite: %@: %s", string, sqlite3_errmsg(_database));
-    abort();
+    NSAssert(0, @"DBSQLite: %@: %s", string, sqlite3_errmsg(_database));
 }
 
 #pragma mark - Load Functions -
-static void dbsqlite_loadStaticVariables() {
+static inline void dbsqlite_loadStaticVariables() {
     if (!_stringClass)     _stringClass     = [NSString class];
     if (!_numberClass)     _numberClass     = [NSNumber class];
     if (!_dateClass)       _dateClass       = [NSDate class];
     if (!_dataClass)       _dataClass       = [NSData class];
     if (!_arrayClass)      _arrayClass      = [NSArray class];
     if (!_dictionaryClass) _dictionaryClass = [NSDictionary class];
+    if (!_urlClass)        _urlClass        = [NSURL class];
     
 #if TARGET_OS_IPHONE
     if (!_imageClass)      _imageClass      = [UIImage class];
@@ -471,7 +540,7 @@ static void dbsqlite_loadStaticVariables() {
 }
 
 #pragma mark - Object Operations & Binding -
-static NSArray * dbsqlite_column_names(sqlite3_stmt *statement, int columnCount) {
+static inline NSArray * dbsqlite_column_names(sqlite3_stmt *statement, int columnCount) {
     NSMutableArray *container = [NSMutableArray new];
     for (int i=0;i<columnCount;i++) {
         [container addObject:[NSString stringWithUTF8String:sqlite3_column_name(statement, i)]];
@@ -479,19 +548,23 @@ static NSArray * dbsqlite_column_names(sqlite3_stmt *statement, int columnCount)
     return container;
 }
 
-static void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) {
+static inline void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) {
     
+    int status = -1;
     if ([object isKindOfClass:_stringClass]) {
-        sqlite3_bind_text(statement, column, [(NSString *)object UTF8String], -1, SQLITE_TRANSIENT);
+        status = sqlite3_bind_text(statement, column, [(NSString *)object UTF8String], -1, SQLITE_TRANSIENT);
+        
+    } else if ([object isKindOfClass:_urlClass]) {
+        status = sqlite3_bind_text(statement, column, [[(NSURL *)object absoluteString] UTF8String], -1, SQLITE_TRANSIENT);
         
     } else if ([object isKindOfClass:_numberClass]) {
-        sqlite3_bind_int64(statement, column, [(NSNumber *)object longLongValue]);
+        status = sqlite3_bind_int64(statement, column, [(NSNumber *)object longLongValue]);
         
     } else if ([object isKindOfClass:_dateClass]) {
-        sqlite3_bind_double(statement, column, [(NSDate *)object timeIntervalSince1970]);
+        status = sqlite3_bind_double(statement, column, [(NSDate *)object timeIntervalSince1970]);
         
     } else if ([object isKindOfClass:_dataClass]) {
-        sqlite3_bind_blob(statement, column, [(NSData *)object bytes], (int)[(NSData *)object length], SQLITE_TRANSIENT);
+        status = sqlite3_bind_blob(statement, column, [(NSData *)object bytes], (int)[(NSData *)object length], SQLITE_TRANSIENT);
         
     } else if ([object isKindOfClass:_imageClass]) {
         
@@ -500,19 +573,23 @@ static void dbsqlite_bindObject(id object, sqlite3_stmt *statement, int column) 
 #else
         NSData *data = [(NSImage *)object TIFFRepresentation];
 #endif
-        sqlite3_bind_blob(statement, column, [data bytes], (int)[data length], SQLITE_TRANSIENT);
+        status = sqlite3_bind_blob(statement, column, [data bytes], (int)[data length], SQLITE_TRANSIENT);
         
     } else if ([object isKindOfClass:_arrayClass] || [object isKindOfClass:_dictionaryClass]) {
         NSData *data = [NSJSONSerialization dataWithJSONObject:object options:0 error:nil];
-        sqlite3_bind_blob(statement, column, [data bytes], (int)[data length], SQLITE_TRANSIENT);
+        status = sqlite3_bind_blob(statement, column, [data bytes], (int)[data length], SQLITE_TRANSIENT);
         
     } else {
-        sqlite3_bind_null(statement, column);
+        status = sqlite3_bind_null(statement, column);
         
+    }
+    
+    if (status != SQLITE_OK) {
+        DBLog(@"DBSQLite: Error binding object, code: %d", status);
     }
 }
 
-static id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, BOOL useNil) {
+static inline id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, BOOL useNil) {
     int columnType = sqlite3_column_type(statement, columnNumber);
     switch (columnType) {
         case SQLITE_INTEGER:
@@ -542,7 +619,7 @@ static id dbsqlite_object_for_column(sqlite3_stmt *statement, int columnNumber, 
     }
 }
 
-static void dbsqlite_bindStatementArgs(va_list args, sqlite3_stmt *statement) {
+static inline void dbsqlite_bindStatementArgs(va_list args, sqlite3_stmt *statement) {
     int arg_count = sqlite3_bind_parameter_count(statement);
     for (int i=1; i<=arg_count; i++) {
         dbsqlite_bindObject(va_arg(args, id), statement, i);
@@ -557,8 +634,8 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
     objc_property_t *properties = class_copyPropertyList(class, &propertyCount);
     for (int i=0;i<propertyCount;i++) {
         
-        const char *ivarName  = NULL;
         const char *className = NULL;
+        const char *ivarName  = NULL;
         
         unsigned int attributeCount;
         objc_property_attribute_t *attributes = property_copyAttributeList(properties[i], &attributeCount);
@@ -576,7 +653,19 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
             Class propertyClass     = NSClassFromString([NSString stringWithUTF8String:cName]);
             free(cName);
             
-            DBSQLiteConversionFunction conversionPointer = dbsqlite_conversionFunctionForPropertyClass(propertyClass);
+            DBSQLiteConversionFunction conversionPointer = nil;
+            
+            // Handle object (id) types
+            if (propertyClass) {
+                conversionPointer = dbsqlite_conversionFunctionForPropertyClass(propertyClass);
+                
+                // Check if we're dealing with compatible CG structs
+            } else {
+                conversionPointer = dbsqlite_conversionFunctionForScalarType(className);
+            }
+            
+            
+            // We have something to work with, add it to the conversion dictionary
             if (conversionPointer) {
                 char *pName            = strndup(ivarName+1, strlen(ivarName)-1);
                 NSString *propertyName = [NSString stringWithUTF8String:pName];
@@ -595,9 +684,12 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
     return container;
 }
 
-static void * dbsqlite_conversionFunctionForPropertyClass(Class class) {
+static inline void * dbsqlite_conversionFunctionForPropertyClass(Class class) {
     if (class == _imageClass) {
         return &dbsqlite_convertDataToImage;
+        
+    } else if (class == _urlClass) {
+        return &dbsqlite_convertStringToURL;
         
     } else if (class == _dateClass) {
         return &dbsqlite_convertIntervalToDate;
@@ -610,23 +702,101 @@ static void * dbsqlite_conversionFunctionForPropertyClass(Class class) {
     }
 }
 
-#pragma mark - Conversion Functions -
-static id dbsqlite_convertDataToJSONObject(NSData *data) {
+static inline void * dbsqlite_conversionFunctionForScalarType(const char *type) {
+    
+    char *new_type = dbsqlite_convertScalarType(type);
+    void *function = NULL;
+    
+    if (strcmp(new_type, _CGRectType) == 0) {
+        function = &dbsqlite_convertStringToCGRectValue;
+        
+    } else if (strcmp(new_type, _CGPointType) == 0) {
+        function = &dbsqlite_convertStringToCGPointValue;
+        
+    } else if (strcmp(new_type, _CGSizeType) == 0) {
+        function = &dbsqlite_convertStringToCGSizeValue;
+        
+    } else if (strcmp(new_type, _CGAffineTransformType) == 0) {
+        function = &dbsqlite_convertStringToCGAffineTransformValue;
+        
+    }
+    
+    free(new_type);
+    return function;
+}
+
+static inline char * dbsqlite_convertScalarType(const char *type) {
+    int enabled          = 0;
+    char *new_type       = strdup(type);
+    unsigned long length = strlen(type);
+    for (int i=0;i<length;i++) {
+        
+        if (new_type[i] == '=') {
+            enabled = 1;
+            continue;
+        }
+        
+        if (new_type[i] == '}' || new_type[i] == '{') {
+            enabled = 0;
+            continue;
+        }
+        
+        if (enabled == 1 && (new_type[i] == 'd' || new_type[i] == 'f')) {
+            new_type[i] = 'x';
+        }
+    }
+    return new_type;
+}
+
+#pragma mark - Class Conversion Functions -
+static inline id dbsqlite_convertDataToJSONObject(NSData *data) {
     return [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
 }
 
-static NSDate * dbsqlite_convertIntervalToDate(NSNumber *timeInterval) {
+static inline id dbsqlite_convertStringToURL(NSString *string) {
+    return [[NSURL alloc] initWithString:string];
+}
+
+static inline NSDate * dbsqlite_convertIntervalToDate(NSNumber *timeInterval) {
     return [[NSDate alloc] initWithTimeIntervalSince1970:[timeInterval doubleValue]];
 }
 
 #if TARGET_OS_IPHONE
-static UIImage * dbsqlite_convertDataToImage(NSData *data) {
+static inline UIImage * dbsqlite_convertDataToImage(NSData *data) {
     return [[UIImage alloc] initWithData:data scale:_screenScale];
 }
 #else
-static NSImage * dbsqlite_convertDataToImage(NSData *data) {
+static inline NSImage * dbsqlite_convertDataToImage(NSData *data) {
     return [[NSImage alloc] initWithData:data];
 }
 #endif
+
+#pragma mark - CG Conversion Functions -
+static inline NSValue * dbsqlite_convertStringToCGRectValue(NSString *string) {
+    return [NSValue valueWithCGRect:CGRectFromString(string)];
+}
+
+static inline NSValue * dbsqlite_convertStringToCGPointValue(NSString *string) {
+    return [NSValue valueWithCGPoint:CGPointFromString(string)];
+}
+
+static inline NSValue * dbsqlite_convertStringToCGSizeValue(NSString *string) {
+    return [NSValue valueWithCGSize:CGSizeFromString(string)];
+}
+
+static inline NSValue * dbsqlite_convertStringToCGAffineTransformValue(NSString *string) {
+    return [NSValue valueWithCGAffineTransform:CGAffineTransformFromString(string)];
+}
+
+
+#pragma mark - Logging -
+static inline void DBLog(NSString *format, ...) {
+#if DEBUG_LEVEL > 0
+    va_list args;
+    va_start(args, format);
+    NSLogv(format, args);
+    va_end(args);
+#endif
+}
 
 @end
