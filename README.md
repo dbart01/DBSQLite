@@ -181,3 +181,4 @@ or asynchronously on the background queue:
      [database executeQuery:@"UPDATE user SET firstName = ? WHERE id = ?", @"Kevin", lastInsertedUserID];
 }];
 ```
+Be careful not to nest two synchronous calls or you will deadlock. Nesting async calls, however, isn't a problem.
