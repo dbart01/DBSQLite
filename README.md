@@ -32,3 +32,21 @@ NSDate *now = [NSDate date]; // Will be stored as a timeIntervalSince1970 (REAL 
      now, 
      ];
 </pre>
+
+Complete list of supported object and scalar types inludes:
+<pre>
+NSNull / nil      - stored as NULL
+NSString          - stored as TEXT
+NSNumber          - stored as INTEGER
+NSURL             - stored as TEXT
+NSData            - stored as BLOB
+NSDate            - stored as REAL number
+UIImage / NSImage - stored as PNG data / TIFF data
+NSArray           - stored as TEXT
+NSDictionary      - stored as TEXT
+NSValue wrapping: - stored as TEXT
+    1. CGRect
+    2. CGSize
+    3. CGPoint
+    4. CGAffineTransform
+</pre>
