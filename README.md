@@ -142,3 +142,16 @@ Using <code>DBSQLite</code> you can insert <code>NSArray</code> and <code>NSDict
 - (void)setJsonWritingOptions:(NSJSONWritingOptions)jsonWritingOptions;
 - (void)setJsonReadingOptions:(NSJSONReadingOptions)jsonReadingOptions;
 ```
+
+## Pragma
+There are several convenience methods that allow for quick-n-easy access to SQLite pragma options. There are various string constants like <code>kDBSQLiteModeOn</code> that help eliminate spelling errors. These include:
+```objc
+[database setBusyTimeout:10]; // Seconds
+[database setForeignKeysEnabled:kDBSQLiteModeOn];
+[database setCaseSensitiveLike:kDBSQLiteModeOff];
+[database setSynchronous:kDBSQLiteModeNormal];
+[database setJournalMode:kDBSQLiteModeDelete];
+[database setTemporaryStore:kDBSQLiteModeMemory];
+```
+
+Setting the above (as well as other) values via an SQL query is identical to the above, with the exception that internal state of these values will no longer be tracked.
