@@ -89,6 +89,8 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 @end
 ```
 
+The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same.
+
 It is important to explicitly declare that a model object conforms to <code>DBSQLiteModelProtocol</code>, otherwise an exception will be thrown upon registering the object.
 
 A model object that conform to <code>DBSQLiteModelProtocol</code> provides a container for data when performing a fetch. Since it's very light-weight, it is actually faster than creating an <code>NSDictionary</code> for every returned row of data. It also has the benefit of converting the returned data to the correct types, which means <code>dateCreated</code> will contain a real <code>NSDate</code> object.
@@ -96,4 +98,9 @@ A model object that conform to <code>DBSQLiteModelProtocol</code> provides a con
 Before we can use <code>XYUser</code>, we **MUST** register it with <code>DBSQLite</code>. Doing so is very easy:
 ```objc
 [DBSQLite registerModelClass:[XYUser class]];
+```
+We can then create a fetch request to retrieve our user objects. We pass in the name of the class that will hold the data and the query used. Here we use a simple SQL query to return all users from the <code>user</code> table.
+
+```objc
+NSArray *users = [database fetchObject:@"XYUser" query:@"SELECT * FROM user"];
 ```
