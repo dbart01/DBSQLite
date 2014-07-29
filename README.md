@@ -10,7 +10,8 @@ To create a fully-functional SQLite database file in the Documents directory of 
 DBSQLite *database = [[DBSQLite alloc] initWithDocumentsFile:@"database.sqlite"];
 </pre>
 
-Let's create a new <code>user</code> table to store future users within an exclusive transaction.
+
+Let's create a new <code>user</code> table to store future users within an exclusive transaction:
 <pre>
 [database startExclusiveTransaction];
 [database executePlainQuery:@"CREATE TABLE IF NOT EXISTS user (\
