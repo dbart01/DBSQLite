@@ -89,7 +89,9 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 @end
 ```
 
-The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same. In this example the property names and column names match exactly, so we let <code>DBSQLite</code> automatically generate the mapping by returning the <code>DBSQLiteKeyMapDefault</code> constant. 
+The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same. It is important to explicitly declare that a model object conforms to <code>DBSQLiteModelProtocol</code>, otherwise an exception will be thrown upon registering the object. 
+
+In this example the property names and column names match exactly, so we let <code>DBSQLite</code> automatically generate the mapping by returning the <code>DBSQLiteKeyMapDefault</code> constant. 
 
 If they were to differ, as it in this table schema:
 
@@ -116,8 +118,6 @@ The mapping would be as follows:
              };
 }
 ```
-
-It is important to explicitly declare that a model object conforms to <code>DBSQLiteModelProtocol</code>, otherwise an exception will be thrown upon registering the object.
 
 A model object that conform to <code>DBSQLiteModelProtocol</code> provides a container for data when performing a fetch. Since it's very light-weight, it is actually faster than creating an <code>NSDictionary</code> for every returned row of data. It also has the benefit of converting the returned data to the correct types, which means <code>dateCreated</code> will contain a real <code>NSDate</code> object.
 
