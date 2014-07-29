@@ -57,10 +57,27 @@ Scalar-types are supported using NSString functions:
 
 Making Queries
 --------------
+
 We can fetch all users, without creating subclasses, with a simple query. We then iterate over the collection using fast enumeration:
+
 <pre>
 NSArray *results = [database fetchDictionary:@"SELECT * FROM users"];
-for (NSDictionary *userDictionary in results) {
-     NSLog(@"First Name: %@", userDictionary[@"firstName"]);
+for (NSDictionary *user in results) {
+     NSLog(@"First Name: %@", user[@"firstName"]);
 }
+</pre>
+
+A better way, is to create a model object instead and adopt the <code>DBSQLiteModelProtocol</code> with just one method.
+
+<pre>
+@interface XYUser : NSObject <DBSQLiteModelProtocol>
+
+@property (strong, nonatomic, readonly) NSNumber *userID;
+@property (strong, nonatomic, readonly) NSString *firstName;
+@property (strong, nonatomic, readonly) NSString *lastName;
+@property (strong, nonatomic, readonly) NSDate *dateCreated;
+
++ (NSDictionary *)keyMapForModelObject;
+
+@end
 </pre>
