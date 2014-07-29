@@ -80,4 +80,14 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 + (NSDictionary *)keyMapForModelObject;
 
 @end
+
+@implementation XYUser
+
++ (NSDictionary *)keyMapForModelObject {
+     return DBSQLiteKeyMapDefault;
+}
+
+@end
 </pre>
+
+A model object that conform to <code>DBSQLiteModelProtocol</code> provides a container for data when performing a fetch. Since it's very light-weight, it is actually faster than creating an <code>NSDictionary</code> for every returned row of data. It also has the benefit of converting the return data to the correct types, which means <code>dateCreated</code> will contain a real <code>NSDate</code> object.
