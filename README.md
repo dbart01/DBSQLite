@@ -54,3 +54,13 @@ Scalar-types are supported using NSString functions:
      NSStringFromCGPoint
      NSStringFromCGAffineTransform
 </pre>
+
+Making Queries
+--------------
+We can fetch all users, without creating subclasses, with a simple query. We then iterate over the collection using fast enumeration:
+<pre>
+NSArray *results = [database fetchDictionary:@"SELECT * FROM users"];
+for (NSDictionary *userDictionary in results) {
+     NSLog(@"First Name: %@", userDictionary[@"firstName"]);
+}
+</pre>
