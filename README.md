@@ -23,8 +23,8 @@ Let's create a new <code>user</code> table to store future users within an exclu
 </pre>
 
 We can then insert a new user and create an index. We can use Objective-C classes like NSString, NSNumber, NSDate, NSData and even NSArray and NSDictionary (as long as they only contain JSON obejcts) as arguments for insertion. DBSQLite will automatically convert them appropriately:
-<pre>
 
+<pre>
 NSDate *now = [NSDate date]; // Will be stored as a timeIntervalSince1970 (REAL number)
  
 [database executeQuery:@"INSERT INTO user (firstName, lastName, dateCreated) VALUES (?, ?, ?)",
@@ -33,10 +33,10 @@ NSDate *now = [NSDate date]; // Will be stored as a timeIntervalSince1970 (REAL 
      now, 
      ];
 [database createIndex:@"userNameIndex" table:@"user" column:@"firstName"];
-
 </pre>
 
 Complete list of supported object and scalar types inludes:
+
 <pre>
 NSNull / nil      - stored as NULL
 NSString          - stored as TEXT
