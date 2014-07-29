@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9AA4284A19882D1D009BF682 /* DBSQLiteQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AA4284819882D1D009BF682 /* DBSQLiteQueue.h */; };
+		9AA4284B19882D1D009BF682 /* DBSQLiteQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = 9AA4284919882D1D009BF682 /* DBSQLiteQueue.m */; };
 		9AF6CBEF18A946AE0078DA05 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AF6CBEE18A946AE0078DA05 /* Foundation.framework */; };
 		9AF6CBF518A946AE0078DA05 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9AF6CBF318A946AE0078DA05 /* InfoPlist.strings */; };
 		9AF6CC7218ABD91E0078DA05 /* DBSQLiteSchema.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AF6CC6918ABD91E0078DA05 /* DBSQLiteSchema.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -21,6 +23,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		9AA4284819882D1D009BF682 /* DBSQLiteQueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DBSQLiteQueue.h; sourceTree = "<group>"; };
+		9AA4284919882D1D009BF682 /* DBSQLiteQueue.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DBSQLiteQueue.m; sourceTree = "<group>"; };
 		9AF6CBEB18A946AE0078DA05 /* DBSQLite.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework.static; includeInIndex = 0; path = DBSQLite.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9AF6CBEE18A946AE0078DA05 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		9AF6CBF218A946AE0078DA05 /* DBSQLite-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "DBSQLite-Info.plist"; sourceTree = "<group>"; };
@@ -81,6 +85,8 @@
 				9AF6CC7C18ABD92A0078DA05 /* Protocol */,
 				9AF6CC7018ABD91E0078DA05 /* DBSQLite.h */,
 				9AF6CC7118ABD91E0078DA05 /* DBSQLite.m */,
+				9AA4284819882D1D009BF682 /* DBSQLiteQueue.h */,
+				9AA4284919882D1D009BF682 /* DBSQLiteQueue.m */,
 				9AF6CBF118A946AE0078DA05 /* Supporting Files */,
 			);
 			path = DBSQLite;
@@ -128,6 +134,7 @@
 				9AF6CC7918ABD91E0078DA05 /* DBSQLite.h in Headers */,
 				9AF6CC7218ABD91E0078DA05 /* DBSQLiteSchema.h in Headers */,
 				9AF6CC7618ABD91E0078DA05 /* DBSQLiteColumn.h in Headers */,
+				9AA4284A19882D1D009BF682 /* DBSQLiteQueue.h in Headers */,
 				9AF6CC7418ABD91E0078DA05 /* DBSQLiteTable.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -242,6 +249,7 @@
 			files = (
 				9AF6CC7518ABD91E0078DA05 /* DBSQLiteTable.m in Sources */,
 				9AF6CC7A18ABD91E0078DA05 /* DBSQLite.m in Sources */,
+				9AA4284B19882D1D009BF682 /* DBSQLiteQueue.m in Sources */,
 				9AF6CC7318ABD91E0078DA05 /* DBSQLiteSchema.m in Sources */,
 				9AF6CC7718ABD91E0078DA05 /* DBSQLiteColumn.m in Sources */,
 			);
