@@ -89,6 +89,8 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 @end
 ```
 
+It is important to explicitly declare that a model object conforms to <code>DBSQLiteModelProtocol</code>, otherwise an exception will be thrown upon registering the object.
+
 A model object that conform to <code>DBSQLiteModelProtocol</code> provides a container for data when performing a fetch. Since it's very light-weight, it is actually faster than creating an <code>NSDictionary</code> for every returned row of data. It also has the benefit of converting the returned data to the correct types, which means <code>dateCreated</code> will contain a real <code>NSDate</code> object.
 
 Before we can use <code>XYUser</code>, we **MUST** register it with <code>DBSQLite</code>. Doing so is very easy:
