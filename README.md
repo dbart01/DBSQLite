@@ -181,4 +181,4 @@ or asynchronously on the background queue:
      [database executeQuery:@"UPDATE user SET firstName = ? WHERE id = ?", @"Kevin", lastInsertedUserID];
 }];
 ```
-Be careful not to nest two synchronous calls or you will deadlock. Nesting async calls, however, isn't a problem.
+Be careful not to nest two synchronous calls or you will deadlock (in practice, <code>DBSQLiteQueue</code> will actually throw an exception to save you the pain and suffering of a deadlock). Nesting async calls, however, isn't a problem.
