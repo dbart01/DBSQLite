@@ -164,9 +164,9 @@ You can easily perform concurrent tasks on the same open database file using a <
 DBSQLiteQueue *queue = [DBSQLiteQueue queueWithDocumentsFile:@"database.sqlite"];
 ```
 
-You can then perform tasks asynchronously on a background queue:
+You can then perform tasks synchronously on a background queue:
 ```objc
-[queue asyncExecution:^(DBSQLite *database) {
+[queue syncExecution:^(DBSQLite *database) {
    [database executeQuery:@"INSERT INTO user (firstName, lastName, dateCreated) VALUES (?, ?, ?)",
      @"Adam",
      @"Smith",
@@ -174,9 +174,9 @@ You can then perform tasks asynchronously on a background queue:
      ];
 }];
 ```
-or synchronously on the background queue:
+or asynchronously on the background queue:
 ```objc
-[queue syncExecution:^(DBSQLite *database) {
+[queue asyncExecution:^(DBSQLite *database) {
      NSNumber *lastInsertedUserID = [database lastInsertID];
      [database executeQuery:@"UPDATE user SET firstName = ? WHERE id = ?", @"Kevin", lastInsertedUserID];
 }];
