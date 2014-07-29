@@ -60,16 +60,16 @@ Making Queries
 
 We can fetch all users, without creating subclasses, with a simple query. We then iterate over the collection using fast enumeration:
 
-<pre>
+```objc
 NSArray *results = [database fetchDictionary:@"SELECT * FROM users"];
 for (NSDictionary *user in results) {
      NSLog(@"First Name: %@", user[@"firstName"]);
 }
-</pre>
+```
 
 A better way, is to create a model object instead and adopt the <code>DBSQLiteModelProtocol</code> with just one method.
 
-<pre>
+```objc
 @interface XYUser : NSObject <DBSQLiteModelProtocol>
 
 @property (strong, nonatomic, readonly) NSNumber *userID;
@@ -88,7 +88,7 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 }
 
 @end
-</pre>
+```
 
 A model object that conform to <code>DBSQLiteModelProtocol</code> provides a container for data when performing a fetch. Since it's very light-weight, it is actually faster than creating an <code>NSDictionary</code> for every returned row of data. It also has the benefit of converting the returned data to the correct types, which means <code>dateCreated</code> will contain a real <code>NSDate</code> object.
 <br>
