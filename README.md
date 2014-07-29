@@ -89,7 +89,9 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 @end
 ```
 
-The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same. In this example the property names and column names match exactly, so we let <code>DBSQLite</code> automatically generate the mapping by returning the <code>DBSQLiteKeyMapDefault</code> constant. If they were to differ, we could implement a custom mapping like so:
+The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same. In this example the property names and column names match exactly, so we let <code>DBSQLite</code> automatically generate the mapping by returning the <code>DBSQLiteKeyMapDefault</code> constant. 
+
+If they were to differ, as it in this table schema:
 
 ```objc
 + (void)createUserTable {
@@ -100,7 +102,11 @@ The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a 
           date_created   REAL \
           )"];
 }
+```
 
+The mapping would be as follows:
+
+```objc
 + (NSDictionary *)keyMapForModelObject {
     return @{
              @"id"           : @"userID",
