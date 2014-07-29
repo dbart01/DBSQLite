@@ -6,9 +6,9 @@ A simple, fast and object-oriented Objective-C framework for working with SQLite
 Getting Started
 ----------------
 To create a fully-functional SQLite database file in the Documents directory of your application, simply create an instance of the <code>DBSQLite</code> class with a single line of code:
-<pre>
+```objc
 DBSQLite *database = [[DBSQLite alloc] initWithDocumentsFile:@"database.sqlite"];
-</pre>
+```
 
 Let's create a new <code>user</code> table to store future users within an exclusive transaction:
 ```objc
@@ -24,7 +24,7 @@ Let's create a new <code>user</code> table to store future users within an exclu
 
 We can then insert a new user and create an index. We can use Objective-C classes like NSString, NSNumber, NSDate, NSData and even NSArray and NSDictionary (as long as they only contain JSON obejcts) as arguments for insertion. DBSQLite will automatically convert them appropriately:
 
-<pre>
+```objc
 NSDate *now = [NSDate date]; // Will be stored as a timeIntervalSince1970 (REAL number)
  
 [database executeQuery:@"INSERT INTO user (firstName, lastName, dateCreated) VALUES (?, ?, ?)",
@@ -33,11 +33,11 @@ NSDate *now = [NSDate date]; // Will be stored as a timeIntervalSince1970 (REAL 
      now, 
      ];
 [database createIndex:@"userNameIndex" table:@"user" column:@"firstName"];
-</pre>
+```
 
 Complete list of supported object and scalar types inludes:
 
-<pre>
+```objc
 NSNull / nil      - stored as NULL
 NSString          - stored as TEXT
 NSNumber          - stored as INTEGER
@@ -53,7 +53,7 @@ Scalar-types are supported using NSString functions:
      NSStringFromCGSize
      NSStringFromCGPoint
      NSStringFromCGAffineTransform
-</pre>
+```
 
 Making Queries
 --------------
