@@ -157,7 +157,7 @@ There are several convenience methods that allow for quick-n-easy access to SQLi
 
 Setting the above (as well as other) values via an SQL query is identical to the above, with the exception that internal state of these values will no longer be tracked.
 
-## Background Tasks
+## Concurrency
 You can easily perform concurrent tasks on the same open database file using a <code>DBSQLiteQueue</code>. Creating one is just like creating a new <code>DBSQLite</code> object:
 
 ```objc
