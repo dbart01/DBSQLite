@@ -62,7 +62,7 @@ We can fetch all users, without creating subclasses, with a simple query. We the
 ```objc
 NSArray *results = [database fetchDictionary:@"SELECT * FROM users"];
 for (NSDictionary *user in results) {
-     NSLog(@"First Name: %@", user[@"firstName"]);
+     NSLog(@"First Name: %@", user[@"firstName"]); // Prints: John
 }
 ```
 
@@ -125,8 +125,12 @@ Before we can use <code>XYUser</code>, we **MUST** register it with <code>DBSQLi
 ```objc
 [DBSQLite registerModelClass:[XYUser class]];
 ```
-We can then create a fetch request to retrieve our user objects. We pass in the name of the class that will hold the data and the query used. Here we use a simple SQL query to return all users from the <code>user</code> table.
+
+We can then fetch and use the user objects. We pass in the name of the class that will hold the data and the query used. Here we use a simple SQL query to return all users from the <code>user</code> table.
 
 ```objc
-NSArray *users = [database fetchObject:@"XYUser" query:@"SELECT * FROM user"];
+NSArray *results = [database fetchObject:@"XYUser" query:@"SELECT * FROM user"];
+for (XYUser *user in results) {
+     NSLog(@"First Name: %@", user.firstName); // Prints: John
+}
 ```
