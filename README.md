@@ -136,4 +136,9 @@ for (XYUser *user in results) {
 ```
 
 ## JSON Support
-Using <code>DBSQLite</code> you can insert <code>NSArray</code> and <code>NSDictionary</code> objects, provided that they only contain JSON-compatible objects: <code>NSString</code>, <code>NSNumber</code>, <code>NSNull</code>, <code>NSArray</code> and <code>NSDictionary</code>.
+Using <code>DBSQLite</code> you can insert <code>NSArray</code> and <code>NSDictionary</code> objects, provided that they only contain JSON-compatible objects: <code>NSString</code>, <code>NSNumber</code>, <code>NSNull</code>, <code>NSArray</code> and <code>NSDictionary</code>. You can set reading and writing options for the JSON serialization and deserialization process via these methods:
+
+```objc
+- (void)setJsonWritingOptions:(NSJSONWritingOptions)jsonWritingOptions;
+- (void)setJsonReadingOptions:(NSJSONReadingOptions)jsonReadingOptions;
+```
