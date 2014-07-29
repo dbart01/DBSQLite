@@ -89,7 +89,27 @@ A better way, is to create a model object instead and adopt the <code>DBSQLiteMo
 @end
 ```
 
-The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same.
+The <code>+ (NSDictionary *)keyMapForModelObject;</code> method should return a mapping of the SQLite table column names to the property names of the model object __IF__ they are __NOT__ the same. In this example the property names and column names match exactly, so we let <code>DBSQLite</code> automatically generate the mapping by returning the <code>DBSQLiteKeyMapDefault</code> constant. If they were to differ, we could implement a custom mapping like so:
+
+```objc
++ (void)createUserTable {
+     [database executePlainQuery:@"CREATE TABLE IF NOT EXISTS user (\
+          id             INTEGER UNIQUE PRIMARY KEY AUTOINCREMENT, \
+          first_name     TEXT, \
+          last_name      TEXT, \
+          date_created   REAL \
+          )"];
+}
+
++ (NSDictionary *)keyMapForModelObject {
+    return @{
+             @"id"           : @"userID",
+             @"first_name"   : @"firstName",
+             @"last_name"    : @"lastName",
+             @"date_created" : @"dateCreated",
+             };
+}
+```
 
 It is important to explicitly declare that a model object conforms to <code>DBSQLiteModelProtocol</code>, otherwise an exception will be thrown upon registering the object.
 
