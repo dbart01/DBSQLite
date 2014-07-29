@@ -19,18 +19,21 @@ Let's create a new <code>user</code> table to store future users within an exclu
      lastName       TEXT, \
      dateCreated    REAL \
      )"];
-[_database commitTransaction];
+[database commitTransaction];
 </pre>
 
-We can then insert a new user. We can use Objective-C classes like NSString, NSNumber, NSDate, NSData and even NSArray and NSDictionary (as long as they only contain JSON obejcts) as arguments for insertion. DBSQLite will automatically convert them appropriately:
+We can then insert a new user and create an index. We can use Objective-C classes like NSString, NSNumber, NSDate, NSData and even NSArray and NSDictionary (as long as they only contain JSON obejcts) as arguments for insertion. DBSQLite will automatically convert them appropriately:
 <pre>
+
 NSDate *now = [NSDate date]; // Will be stored as a timeIntervalSince1970 (REAL number)
  
-[_database executeQuery:@"INSERT INTO user (firstName, lastName, dateCreated) VALUES (?, ?, ?)",
+[database executeQuery:@"INSERT INTO user (firstName, lastName, dateCreated) VALUES (?, ?, ?)",
      @"John",
      @"Appleseed",
      now, 
      ];
+[database createIndex:@"userNameIndex" table:@"user" column:@"firstName"];
+
 </pre>
 
 Complete list of supported object and scalar types inludes:
