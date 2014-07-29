@@ -55,8 +55,7 @@ Scalar-types are supported using NSString functions:
      NSStringFromCGAffineTransform
 ```
 
-Making Queries
---------------
+### Making Queries
 
 We can fetch all users, without creating subclasses, with a simple query. We then iterate over the collection using fast enumeration:
 
