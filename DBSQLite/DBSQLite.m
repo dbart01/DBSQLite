@@ -117,6 +117,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
     [self setBusyTimeout:10];
     
     [self setForeignKeysEnabled:YES];
+    [self setCaseSensitiveLike:NO];
     [self setSynchronous:kDBSQLiteModeNormal];
     [self setJournalMode:kDBSQLiteModeDelete];
     [self setTemporaryStore:kDBSQLiteModeMemory];
@@ -157,7 +158,7 @@ typedef id (*DBSQLiteConversionFunction)(id);
         NSString *name                     = NSStringFromClass(class);
         
         _registeredClasses[name]           = class;
-        _registeredClassMaps[name]         = [class keyMapForModelObject];
+        _registeredClassMaps[name]         = [class keyMapForModelObject] ?: dbsqlite_generateDefaultKeyMap(class);
         
         NSDictionary *transformers         = dbsqlite_conversionDictionary(class);
         if (transformers) {
@@ -260,24 +261,24 @@ typedef id (*DBSQLiteConversionFunction)(id);
 }
 
 #pragma mark - Savepoints -
-- (void)savepoint:(NSString *)savepoint {
-    _inTransaction = YES;
-    _savepointCount++;
-    [self executePlainQuery:[self sql:@"SAVEPOINT %@;", savepoint]];
-}
-
-- (void)releaseSavepoint:(NSString *)savepoint {
-    if (_savepointCount > 0) _savepointCount--;
-    if (_savepointCount == 0) {
-        _inTransaction = NO;
-    }
-    [self executePlainQuery:[self sql:@"RELEASE SAVEPOINT %@;", savepoint]];
-}
-
-- (void)rollbackSavepoint:(NSString *)savepoint {
-    // TODO: Handle savepoint count (how to determine how many are left?)
-    [self executePlainQuery:[self sql:@"ROLLBACK TRANSACTION TO SAVEPOINT %@;", savepoint]];
-}
+//- (void)savepoint:(NSString *)savepoint {
+//    _inTransaction = YES;
+//    _savepointCount++;
+//    [self executePlainQuery:[self sql:@"SAVEPOINT %@;", savepoint]];
+//}
+//
+//- (void)releaseSavepoint:(NSString *)savepoint {
+//    if (_savepointCount > 0) _savepointCount--;
+//    if (_savepointCount == 0) {
+//        _inTransaction = NO;
+//    }
+//    [self executePlainQuery:[self sql:@"RELEASE SAVEPOINT %@;", savepoint]];
+//}
+//
+//- (void)rollbackSavepoint:(NSString *)savepoint {
+//    // TODO: Handle savepoint count (how to determine how many are left?)
+//    [self executePlainQuery:[self sql:@"ROLLBACK TRANSACTION TO SAVEPOINT %@;", savepoint]];
+//}
 
 #pragma mark - Mode Setters -
 - (void)setBusyTimeout:(NSTimeInterval)busyTimeout {
@@ -289,6 +290,13 @@ typedef id (*DBSQLiteConversionFunction)(id);
     NSString *onString = (enabled) ? kDBSQLiteModeOn : kDBSQLiteModeOff;
     if ([self executePlainQuery:[self sql:@"PRAGMA foreign_keys = %@;", onString]]) {
         _foreignKeysActive = enabled;
+    }
+}
+
+- (void)setCaseSensitiveLike:(BOOL)caseSensitiveLike {
+    NSString *onString = (caseSensitiveLike) ? kDBSQLiteModeOn : kDBSQLiteModeOff;
+    if ([self executePlainQuery:[self sql:@"PRAGMA case_sensitive_like = %@;", onString]]) {
+        _caseSensitiveLike = caseSensitiveLike;
     }
 }
 
@@ -627,6 +635,33 @@ static inline void dbsqlite_bindStatementArgs(va_list args, sqlite3_stmt *statem
 }
 
 #pragma mark - Registering Classes -
+static NSDictionary * dbsqlite_generateDefaultKeyMap(Class class) {
+    
+    NSMutableDictionary *keyMap = [NSMutableDictionary new];
+    Class currentClass          = class;
+    do {
+        
+        [keyMap addEntriesFromDictionary:dbsqlite_keyMapForClass(currentClass)];
+        
+        currentClass = class_getSuperclass(currentClass);
+    } while(currentClass != [NSObject class]);
+    
+    return keyMap;
+}
+
+static NSMutableDictionary * dbsqlite_keyMapForClass(Class class) {
+    NSMutableDictionary *keyMap = [NSMutableDictionary new];
+    
+    unsigned int propertyCount;
+    objc_property_t *properties = class_copyPropertyList(class, &propertyCount);
+    for (int i=0;i<propertyCount;i++) {
+        NSString *name = [NSString stringWithUTF8String:property_getName(properties[i])];
+        keyMap[name]   = name;
+    }
+    
+    return keyMap;
+}
+
 static NSDictionary * dbsqlite_conversionDictionary(Class class) {
     NSMutableDictionary *container = nil;
     
@@ -634,24 +669,15 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
     objc_property_t *properties = class_copyPropertyList(class, &propertyCount);
     for (int i=0;i<propertyCount;i++) {
         
-        const char *className = NULL;
-        const char *ivarName  = NULL;
-        
-        unsigned int attributeCount;
-        objc_property_attribute_t *attributes = property_copyAttributeList(properties[i], &attributeCount);
-        for (int i=0;i<attributeCount;i++) {
-            objc_property_attribute_t attribute = attributes[i];
-            switch (attribute.name[0]) {
-                case 'T': className = attribute.value; break;
-                case 'V': ivarName  = attribute.value; break;
+        char *className = property_copyAttributeValue(properties[i], "T");
+        if (className) {
+            
+            Class propertyClass = nil;
+            if (strlen(className) > 1) { // Check if className or scalar type (if strlen == 1, most likely scalar type)
+                char *cName   = strndup(className+2, strlen(className)-3);
+                propertyClass = NSClassFromString([NSString stringWithUTF8String:cName]);
+                free(cName);
             }
-        }
-        free(attributes);
-        
-        if (ivarName && className) {
-            char *cName             = strndup(className+2, strlen(className)-3);
-            Class propertyClass     = NSClassFromString([NSString stringWithUTF8String:cName]);
-            free(cName);
             
             DBSQLiteConversionFunction conversionPointer = nil;
             
@@ -667,9 +693,7 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
             
             // We have something to work with, add it to the conversion dictionary
             if (conversionPointer) {
-                char *pName            = strndup(ivarName+1, strlen(ivarName)-1);
-                NSString *propertyName = [NSString stringWithUTF8String:pName];
-                free(pName);
+                NSString *propertyName = [NSString stringWithUTF8String:property_getName(properties[i])];
                 
                 if (!container) {
                     container = [NSMutableDictionary new];
@@ -677,6 +701,7 @@ static NSDictionary * dbsqlite_conversionDictionary(Class class) {
                 container[propertyName] = [NSValue valueWithPointer:conversionPointer];
             }
         }
+        free(className);
         
     }
     free(properties);
@@ -704,24 +729,55 @@ static inline void * dbsqlite_conversionFunctionForPropertyClass(Class class) {
 
 static inline void * dbsqlite_conversionFunctionForScalarType(const char *type) {
     
-    char *new_type = dbsqlite_convertScalarType(type);
     void *function = NULL;
     
-    if (strcmp(new_type, _CGRectType) == 0) {
-        function = &dbsqlite_convertStringToCGRectValue;
+    // Dealing with single character types (int, char, long, etc)
+    if (strlen(type) == 1) {
         
-    } else if (strcmp(new_type, _CGPointType) == 0) {
-        function = &dbsqlite_convertStringToCGPointValue;
+        switch (type[0]) {
+            case 'c':
+            case 'i':
+            case 's':
+            case 'l':
+            case 'q':
+            case 'C':
+            case 'I':
+            case 'S':
+            case 'L':
+            case 'Q':
+            case 'f':
+            case 'd':
+            case 'B':
+            case '*':
+                function = &dbsqlite_convertNilForScalar;
+                break;
+        }
         
-    } else if (strcmp(new_type, _CGSizeType) == 0) {
-        function = &dbsqlite_convertStringToCGSizeValue;
+        // Dealing with multi-character types ({CGSize=ff}, etc)
+    } else {
         
-    } else if (strcmp(new_type, _CGAffineTransformType) == 0) {
-        function = &dbsqlite_convertStringToCGAffineTransformValue;
+        // 32-Bit systems are 'ff' while 64-Bit systems are 'dd'
+        // Must convert {CGSize=ff} -> {CGSize=xx}
         
+        char *new_type = dbsqlite_convertScalarType(type);
+        
+        if (strcmp(new_type, _CGRectType) == 0) {
+            function = &dbsqlite_convertStringToCGRectValue;
+            
+        } else if (strcmp(new_type, _CGPointType) == 0) {
+            function = &dbsqlite_convertStringToCGPointValue;
+            
+        } else if (strcmp(new_type, _CGSizeType) == 0) {
+            function = &dbsqlite_convertStringToCGSizeValue;
+            
+        } else if (strcmp(new_type, _CGAffineTransformType) == 0) {
+            function = &dbsqlite_convertStringToCGAffineTransformValue;
+            
+        }
+        
+        free(new_type);
     }
     
-    free(new_type);
     return function;
 }
 
@@ -770,6 +826,16 @@ static inline NSImage * dbsqlite_convertDataToImage(NSData *data) {
     return [[NSImage alloc] initWithData:data];
 }
 #endif
+
+
+#pragma mark - Scalar Conversion Functions -
+static inline id dbsqlite_convertNilForScalar(id number) {
+    if (!number) {
+        return @NO;
+    } else {
+        return number;
+    }
+}
 
 #pragma mark - CG Conversion Functions -
 static inline NSValue * dbsqlite_convertStringToCGRectValue(NSString *string) {

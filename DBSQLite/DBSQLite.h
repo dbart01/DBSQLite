@@ -5,11 +5,11 @@
 //  Copyright (c) 2014 Dima Bart. All rights reserved.
 //
 
-    #if TARGET_OS_IPHONE
+#if TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
-    #else
+#else
 #import <AppKit/AppKit.h>
-    #endif
+#endif
 
 #define DEBUG_LEVEL 1
 
@@ -28,6 +28,8 @@ static NSString * const kDBSQLiteModeFile     = @"FILE";
 static NSString * const kDBSQLiteModeNormal   = @"NORMAL";
 static NSString * const kDBSQLiteModeFull     = @"FULL";
 
+static NSDictionary * const DBSQLiteKeyMapDefault = nil;
+
 @class DBSQLiteSchema;
 
 @interface DBSQLite : NSObject
@@ -37,6 +39,7 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 @property (strong, nonatomic, readonly) NSString *databasePath;
 
 @property (assign, nonatomic, readonly) BOOL foreignKeysActive;                  // Default: ON
+@property (assign, nonatomic, readonly) BOOL caseSensitiveLike;                  // Default: OFF
 @property (assign, nonatomic, readonly) NSTimeInterval busyTimeout;              // Default: 10 seconds
 @property (strong, nonatomic, readonly) NSString *synchronous;                   // Default: NORMAL
 @property (strong, nonatomic, readonly) NSString *journalMode;                   // Default: DELETE
@@ -62,13 +65,14 @@ static NSString * const kDBSQLiteModeFull     = @"FULL";
 - (void)commitTransaction;
 - (void)rollbackTransaction;
 
-// TODO: Untested, should be tested before releasing
+// TODO: Savepoints are not reliable. Cannot determine if "inTransaction" after rollback
 //- (void)savepoint:(NSString *)savepoint;
 //- (void)releaseSavepoint:(NSString *)savepoint;
 //- (void)rollbackSavepoint:(NSString *)savepoint;
 
 - (void)setBusyTimeout:(NSTimeInterval)busyTimeout;
 - (void)setForeignKeysEnabled:(BOOL)enabled;
+- (void)setCaseSensitiveLike:(BOOL)caseSensitiveLike;
 - (void)setSynchronous:(NSString *)synchronous;
 - (void)setJournalMode:(NSString *)journalMode;
 - (void)setTemporaryStore:(NSString *)temporaryStore;
