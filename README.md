@@ -134,3 +134,6 @@ for (XYUser *user in results) {
      NSLog(@"First Name: %@", user.firstName); // Prints: John
 }
 ```
+
+## JSON Support
+Using <code>DBSQLite</code> you can insert <code>NSArray</code> and <code>NSDictionary</code> objects, provided that they only contain JSON-compatible objects: <code>NSString</code>, <code>NSNumber</code>, <code>NSNull</code>, <code>NSArray</code> and <code>NSDictionary</code>.
