@@ -11,7 +11,7 @@
 #import <AppKit/AppKit.h>
 #endif
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 0
 
 #import "DBSQLiteModelProtocol.h"
 #import "DBSQLiteQueue.h"
